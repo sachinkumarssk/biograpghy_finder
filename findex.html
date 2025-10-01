@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tribute Page</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts for an elegant look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #111827; /* A dark gray background */
+        }
+        h1, h2, blockquote {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Style for the active button */
+        .choice-btn.active, .lang-btn.active {
+            background-color: #10B981; /* A bright green */
+            color: white;
+            font-weight: bold;
+        }
+        /* Simple spinner animation */
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #10B981;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-300">
+
+    <!-- Main container to center the content -->
+    <div class="container mx-auto max-w-4xl p-4 md:p-8">
+
+        <!-- Search Section -->
+        <section class="text-center mb-12">
+            <form id="search-form" class="max-w-sm mx-auto">
+                <label for="search-input" class="block text-2xl text-white mb-4">Search for a Visionary</label>
+                <div class="flex">
+                    <input type="search" id="search-input" class="bg-gray-700 text-white block w-full px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="e.g., Nikola Tesla">
+                    <button type="submit" id="search-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-r-lg w-28 flex items-center justify-center">
+                        Search
+                    </button>
+                </div>
+                <p id="search-error" class="text-red-500 text-sm mt-2 h-5"></p>
+            </form>
+        </section>
+
+        <!-- Choice Buttons Section -->
+        <section class="text-center mb-12">
+            <h2 class="text-xl text-gray-400 mb-4">- OR -</h2>
+            <div id="choice-container" class="flex justify-center gap-4 flex-wrap">
+                <button data-person="Steve Jobs" class="choice-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">Steve Jobs</button>
+                <button data-person="Marie Curie" class="choice-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">Marie Curie</button>
+                <button data-person="Albert Einstein" class="choice-btn px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">Albert Einstein</button>
+            </div>
+        </section>
+
+        <!-- Header Section -->
+        <header class="text-center my-12">
+            <h1 id="person-name" class="text-5xl md:text-7xl font-bold text-white"></h1>
+            <p id="person-lifespan" class="text-xl text-gray-400 mt-2"></p>
+        </header>
+
+        <!-- Main Content Section -->
+        <main>
+            <section class="my-16 flex flex-col md:flex-row items-center gap-8">
+                <div class="w-full md:w-1/2 text-center md:text-left">
+                    <blockquote id="person-quote" class="text-3xl md:text-4xl italic text-white leading-tight"></blockquote>
+                </div>
+                <div class="w-full md:w-1/2">
+                    <img id="person-image" src="" alt="A portrait" class="rounded-lg shadow-2xl w-full h-auto bg-gray-800">
+                </div>
+            </section>
+            <hr class="border-t-2 border-gray-700 my-16">
+            <section class="my-16">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-4xl font-bold text-white text-center md:text-left">Biography</h2>
+                    <div id="lang-container" class="flex gap-2">
+                        <button data-lang="english" class="lang-btn px-3 py-1 text-sm rounded-md bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">English</button>
+                        <button data-lang="hindi" class="lang-btn px-3 py-1 text-sm rounded-md bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors">हिन्दी</button>
+                    </div>
+                </div>
+                <p id="person-bio" class="text-lg leading-relaxed text-gray-400"></p>
+            </section>
+        </main>
+
+        <footer class="text-center mt-16 mb-8 text-gray-500">
+            <p>Made with admiration for the visionaries.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const nameEl = document.getElementById('person-name');
+        const lifespanEl = document.getElementById('person-lifespan');
+        const quoteEl = document.getElementById('person-quote');
+        const imageEl = document.getElementById('person-image');
+        const bioEl = document.getElementById('person-bio');
+        const choiceContainer = document.getElementById('choice-container');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const searchError = document.getElementById('search-error');
+        const langContainer = document.getElementById('lang-container');
+
+        // --- Application State ---
+        let currentTributeData = null;
+        let currentLanguage = 'english';
+
+        /**
+         * Generates an image from a description using the Imagen API.
+         * @param {string} description - A textual description for the image.
+         * @param {string} personName - The name of the person for fallback text.
+         */
+        async function generateAndSetImage(description, personName) {
+            imageEl.src = `https://placehold.co/600x600/1F2937/FFFFFF?text=Generating...`;
+            const apiKey = "AIzaSyC8UkUpMYrf-DRmhLCENalCzAT0ErMB4Uk"; // API key provided by environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            const payload = { instances: [{ prompt: description }], parameters: { "sampleCount": 1 } };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Image generation failed.');
+                
+                const result = await response.json();
+                if (result.predictions && result.predictions[0].bytesBase64Encoded) {
+                    imageEl.src = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                } else {
+                    throw new Error('No image data in response.');
+                }
+            } catch (error) {
+                console.error("Image Generation Error:", error);
+                imageEl.src = `https://placehold.co/600x600/1F2937/FFFFFF?text=${encodeURIComponent(personName)}`;
+            }
+        }
+
+        /**
+         * Fetches tribute data for a given person from the Gemini API.
+         * @param {string} personName - The name of the person to search for.
+         */
+        async function fetchTributeData(personName) {
+            searchButton.innerHTML = '<div class="spinner"></div>';
+            searchButton.disabled = true;
+            searchError.textContent = '';
+
+            const apiKey = "AIzaSyC8UkUpMYrf-DRmhLCENalCzAT0ErMB4Uk"; // API key provided by environment
+            const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const prompt = `Provide tribute information for ${personName}. Return a valid JSON object with keys: "name", "lifespan", "quote", "bio" (an object with "english" and "hindi" keys, each with a 200-250 word biography), and "imageDescription" (a short, photorealistic description for an image generation model, e.g., "Photorealistic portrait of a thoughtful Albert Einstein in his 60s").`;
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            try {
+                const response = await fetch(textApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                    currentTributeData = JSON.parse(result.candidates[0].content.parts[0].text);
+                    updateTributePage(personName); // Update text first
+                    // Then, generate the image asynchronously
+                    generateAndSetImage(currentTributeData.imageDescription, currentTributeData.name);
+                } else {
+                    throw new Error("Invalid response structure from API.");
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                searchError.textContent = `Could not find information for '${personName}'.`;
+                currentTributeData = null;
+            } finally {
+                searchButton.innerHTML = 'Search';
+                searchButton.disabled = false;
+            }
+        }
+
+        /**
+         * Updates the page's text content. The image is handled separately.
+         * @param {string} originalQuery - The name that was searched for.
+         */
+        function updateTributePage(originalQuery) {
+            if (!currentTributeData || !currentTributeData.name) {
+                 searchError.textContent = `Could not find information for '${originalQuery}'.`;
+                 return;
+            }
+            
+            searchError.textContent = '';
+            searchInput.value = '';
+
+            nameEl.textContent = currentTributeData.name;
+            lifespanEl.textContent = currentTributeData.lifespan;
+            quoteEl.textContent = `"${currentTributeData.quote}"`;
+            
+            updateBiographyDisplay();
+
+            const buttons = choiceContainer.querySelectorAll('.choice-btn');
+            buttons.forEach(button => {
+                button.classList.toggle('active', button.dataset.person.toLowerCase() === currentTributeData.name.toLowerCase());
+            });
+        }
+
+        /**
+         * Updates only the biography text and language button styles.
+         */
+        function updateBiographyDisplay() {
+            if (currentTributeData && currentTributeData.bio) {
+                bioEl.textContent = currentTributeData.bio[currentLanguage] || "Translation not available.";
+            } else {
+                bioEl.textContent = "";
+            }
+
+            const langButtons = langContainer.querySelectorAll('.lang-btn');
+            langButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.lang === currentLanguage);
+            });
+        }
+        
+        // --- Event Listeners ---
+        searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const query = searchInput.value.trim();
+            if (query) fetchTributeData(query);
+        });
+
+        choiceContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('choice-btn')) {
+                const personName = event.target.dataset.person;
+                fetchTributeData(personName);
+            }
+        });
+
+        langContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('lang-btn')) {
+                currentLanguage = event.target.dataset.lang;
+                updateBiographyDisplay();
+            }
+        });
+
+        // Load the initial tribute when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchTributeData('Steve Jobs');
+        });
+    </script>
+
+</body>
+</html>
